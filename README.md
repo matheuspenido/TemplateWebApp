@@ -125,7 +125,7 @@ docker run -p 8080:8080 --name webapp-api --network test-network  -e PROJECT_NAM
 
 Create the nginx-server container:
 docker build -f ./nginx-server/Dockerfile -t nginx-server ./nginx-server
-docker run --network test-network -v $(pwd)/nginx-server/certs/localhost.crt:/etc/nginx/ssl/localhost.crt -v $(pwd)/nginx-server/certs/localhost.key:/etc/nginx/ssl/localhost.key -v $(pwd)/nginx-server/default.conf:/etc/nginx/conf.d/default.conf -p 443:443 -p 80:80 nginx-server
+docker run --network test-network -v $(pwd)/nginx-server/certs/localhost.crt:/etc/nginx/ssl/localhost.crt -v $(pwd)/nginx-server/certs/localhost.key:/etc/nginx/ssl/localhost.key -v $(pwd)/nginx-server/default.conf.template:/etc/nginx/conf.d/default.conf.template -p 443:443 -p 80:80 nginx-server
 
 try to navigate http://localhost and notice that you should be redirect to https://localhost and a warning message should appear saying that there went something wrong with the certificate. That is happening because we are using a self signed certificate... Accept the risk, dont worry, this is our app.
 Try to navigate now to https://localhost/swagger and you'll be able to see the swagger page running properly.
@@ -211,33 +211,59 @@ API_ADDRESS=webapp-api
 CERT_NAME=localhost.crt
 CERT_KEY=localhost.key
 
-Replace the hardcoded default.conf by:
-# Redirect HTTP to HTTPS
-server {
-    listen 80;
-    server_name $SERVER_NAME;
-    return 301 https://$host$request_uri; #To redirect to https.
-}
+---------------------------
 
-# Handle HTTPS for the backend
-server {
-    listen 443 ssl;
-    server_name $SERVER_NAME;
+Creating the docker compose file to make the process easy to use.
 
-    ssl_certificate /etc/nginx/ssl/$CERT_NAME;
-    ssl_certificate_key /etc/nginx/ssl/$CERT_KEY;
+On the root folder:
+mkdir docker.
 
-    location / {
-        proxy_pass http://$API_ADDRESS:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
+inside the docker folder, create the file:
+
+docker-compose.dev.yml:
+
+services:
+  myapp:
+    image: my-app-img
+    build:
+      context: ../MyApp
+      dockerfile: Dockerfile
+      args:
+        PROJECT_NAME: MyApp.API
+    ports:
+      - "8080:8080"
+    env_file:
+      - ../.env.dev
+    networks:
+      - rp-network
+
+  nginx:
+    container_name: myapp-webservice-rp-img
+    build:
+      context: ../nginx-server
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file:
+      - ../.env.dev
+    volumes:
+      - ../nginx-server/certs/localhost.crt:/etc/nginx/ssl/localhost.crt
+      - ../nginx-server/certs/localhost.key:/etc/nginx/ssl/localhost.key
+      - ../nginx-server/default.conf.template:/etc/nginx/conf.d/default.conf.template
+    networks:
+      - rp-network
+
+networks:
+  rp-network:
+    driver: bridge
+
+It could be tested executing:
+docker-compose -f docker/docker-compose.dev.yml up --build
 
 ---------------------------
 Dev environment:
-The purpose to have a dev environment is to allow the developer create the solution without the concern about the host environment.
+The purpose to have a dev environment is to allow the developer create the solution without the concern about the host environment and the required packages to have the app up and running.
 
 The objective here is to allow the code update the image developed whenever it is changed, doing that automatically.
+

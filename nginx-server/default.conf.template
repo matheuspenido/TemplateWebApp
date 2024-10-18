@@ -1,20 +1,20 @@
 # Redirect HTTP to HTTPS
 server {
     listen 80;
-    server_name $SERVER_NAME;
+    server_name ${SERVER_NAME};
     return 301 https://$host$request_uri; #To redirect to https.
 }
 
 # Handle HTTPS for the backend
 server {
     listen 443 ssl;
-    server_name $SERVER_NAME;
+    server_name ${SERVER_NAME};
 
     ssl_certificate /etc/nginx/ssl/$CERT_NAME;
     ssl_certificate_key /etc/nginx/ssl/$CERT_KEY;
 
     location / {
-        proxy_pass http://$API_ADDRESS:8080;
+        proxy_pass http://${API_ADDRESS}:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

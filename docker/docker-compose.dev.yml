@@ -1,0 +1,35 @@
+services:
+  myapp:
+    image: my-app-img
+    build:
+      context: ../MyApp
+      dockerfile: Dockerfile
+      args:
+        PROJECT_NAME: MyApp.API
+    ports:
+      - "8080:8080"
+    env_file:
+      - ../.env.dev
+    networks:
+      - rp-network
+
+  nginx:
+    container_name: myapp-webservice-rp-img
+    build:
+      context: ../nginx-server
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file:
+      - ../.env.dev
+    volumes:
+      - ../nginx-server/certs/localhost.crt:/etc/nginx/ssl/localhost.crt
+      - ../nginx-server/certs/localhost.key:/etc/nginx/ssl/localhost.key
+      - ../nginx-server/default.conf.template:/etc/nginx/conf.d/default.conf.template
+    networks:
+      - rp-network
+
+networks:
+  rp-network:
+    driver: bridge
