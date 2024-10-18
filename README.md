@@ -11,6 +11,7 @@ cd app
 dotnet new sln -n MyApp
 dotnet new webapi -n MyApp.API
 dotnet sln MyApp.sln add MyApp.API/MyApp.API.csproj
+dotnet new gitignore
 exit
 
 exit command will return to host.
