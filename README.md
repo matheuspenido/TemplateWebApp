@@ -204,10 +204,11 @@ docker run --network test-network -v $(pwd)/nginx-server/certs/localhost.crt:/et
 
 Lets create the docker compose file to allow the process became easier.
 
-To configure that, lets create a .env.dev to create environment variables to specify the config for development and we will create placeholders to be replaced by our environment variable during the execution of our container.
+To configure that, lets create a .env.test to create environment variables to specify the config for test env and we will create placeholders to be replaced by our environment variable during the execution of our container.
 
-Create the .env.dev file at the same level of MyApp or nginx-server:
+Create the .env.test file at the same level of MyApp or nginx-server:
 SERVER_NAME=localhost
+PROJECT_NAME=MyApp.API
 API_ADDRESS=webapp-api
 CERT_NAME=localhost.crt
 CERT_KEY=localhost.key
@@ -221,7 +222,7 @@ mkdir docker.
 
 inside the docker folder, create the file:
 
-docker-compose.dev.yml:
+docker-compose.test.yml:
 
 services:
   myapp:
@@ -234,7 +235,7 @@ services:
     ports:
       - "8080:8080"
     env_file:
-      - ../.env.dev
+      - ../.env.test
     networks:
       - rp-network
 
@@ -247,7 +248,7 @@ services:
       - "80:80"
       - "443:443"
     env_file:
-      - ../.env.dev
+      - ../.env.test
     volumes:
       - ../nginx-server/certs/localhost.crt:/etc/nginx/ssl/localhost.crt
       - ../nginx-server/certs/localhost.key:/etc/nginx/ssl/localhost.key
@@ -260,7 +261,7 @@ networks:
     driver: bridge
 
 It could be tested executing:
-docker-compose -f docker/docker-compose.dev.yml up --build
+docker-compose -f docker/docker-compose.test.yml up --build
 
 ---------------------------
 Dev environment:
@@ -287,4 +288,66 @@ docker run --rm -v $(pwd)/MyApp/:/app -e PROJECT_NAME=MyApp.API -e ASPNETCORE_UR
 
 After that, when the code is changed, it should be reflected on the running container.
 
-Lets try to include our app behind nginx server:
+
+-------------------------
+
+Lets try to include our app with code reload behind nginx server:
+
+docker network create test-network
+
+docker build -f ./MyApp/Dockerfile.dev --build-arg PROJECT_NAME=MyApp.API -t webapp ./MyApp
+
+docker run --rm --network test-network --name webapp-api -v $(pwd)/MyApp/:/app -e PROJECT_NAME=MyApp.API -e ASPNETCORE_URLS="http://+:8080" -e ASPNETCORE_ENVIRONMENT=Development my-app-dev
+
+docker build -f ./nginx-server/Dockerfile -t nginx-server ./nginx-server
+
+docker run --network test-network -v $(pwd)/nginx-server/certs/localhost.crt:/etc/nginx/ssl/localhost.crt -v $(pwd)/nginx-server/certs/localhost.key:/etc/nginx/ssl/localhost.key -v $(pwd)/nginx-server/default.conf.template:/etc/nginx/conf.d/default.conf.template -e SERVER_NAME=localhost -e API_ADDRESS=webapp-api -e CERT_NAME=localhost.crt -e CERT_KEY=localhost.key -p 443:443 -p 80:80 nginx-server
+
+---------------------------------------
+
+Lets create the docker-compose to be responsible to automatically create the development environment without all the overhead of docker cli build and run:
+
+Create the .env.dev file at the same level of MyApp or nginx-server:
+SERVER_NAME=localhost
+PROJECT_NAME=MyApp.API
+API_ADDRESS=webapp-api
+CERT_NAME=localhost.crt
+CERT_KEY=localhost.key
+
+docker-compose.dev.yml:
+
+services:
+  myapp:
+    image: my-app-img
+    build:
+      context: ../MyApp
+      dockerfile: Dockerfile.dev
+      args:
+        PROJECT_NAME: MyApp.API
+    env_file:
+      - ../.env.dev
+    volumes:
+      - ../MyApp:/app
+    networks:
+      - rp-network
+
+  nginx:
+    container_name: myapp-webservice-rp-img
+    build:
+      context: ../nginx-server
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file:
+      - ../.env.dev
+    volumes:
+      - ../nginx-server/certs/localhost.crt:/etc/nginx/ssl/localhost.crt
+      - ../nginx-server/certs/localhost.key:/etc/nginx/ssl/localhost.key
+      - ../nginx-server/default.conf.template:/etc/nginx/conf.d/default.conf.template
+    networks:
+      - rp-network
+
+networks:
+  rp-network:
+    driver: bridge

@@ -3,13 +3,13 @@ services:
     image: my-app-img
     build:
       context: ../MyApp
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
       args:
         PROJECT_NAME: MyApp.API
+    ports:
+      - "8080:8080"
     env_file:
       - ../.env.dev
-    volumes:
-      - ../MyApp:/app
     networks:
       - rp-network
 
