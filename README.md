@@ -267,3 +267,23 @@ The purpose to have a dev environment is to allow the developer create the solut
 
 The objective here is to allow the code update the image developed whenever it is changed, doing that automatically.
 
+Create the Dockerfile.dev, this docker file will be responsible only to build the image using the volumes to map the code in development be transported to image wheneve something changed.
+
+Dockerfile.dev:
+
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS dev
+
+WORKDIR /app
+
+EXPOSE 8080
+
+CMD dotnet watch run --project "/app/$PROJECT_NAME/" --urls "${ASPNETCORE_URLS}" --no-hot-reload
+
+To test it, we can run:
+docker build -f ./MyApp/Dockerfile.dev -t my-app-dev ./MyApp/
+
+docker run --rm -v $(pwd)/MyApp/:/app -e PROJECT_NAME=MyApp.API -e ASPNETCORE_URLS="http://+:8080" -e ASPNETCORE_ENVIRONMENT=Development my-app-dev
+
+After that, when the code is changed, it should be reflected on the running container.
+
+Lets try to include our app behind nginx server:
