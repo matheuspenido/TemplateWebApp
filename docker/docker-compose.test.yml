@@ -1,20 +1,20 @@
 services:
   myapp:
-    image: my-app-img
+    image: my-app-test:1.0
+    container_name: my-app-test-container
     build:
       context: ../MyApp
       dockerfile: Dockerfile
       args:
         PROJECT_NAME: MyApp.API
-    ports:
-      - "8080:8080"
     env_file:
       - ../.env.dev
     networks:
       - rp-network
 
   nginx:
-    container_name: myapp-webservice-rp-img
+    image: nginx-service-rp-test:1.0
+    container_name: mginx-service-rp-test-container
     build:
       context: ../nginx-server
       dockerfile: Dockerfile

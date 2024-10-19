@@ -1,6 +1,7 @@
 services:
   myapp:
-    image: my-app-img
+    image: my-app-dev:1.0
+    container_name: my-app-dev-container
     build:
       context: ../MyApp
       dockerfile: Dockerfile.dev
@@ -14,7 +15,8 @@ services:
       - rp-network
 
   nginx:
-    container_name: myapp-webservice-rp-img
+    image: nginx-service-rp-dev:1.0
+    container_name: nginx-service-rp-dev-container
     build:
       context: ../nginx-server
       dockerfile: Dockerfile
