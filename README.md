@@ -502,3 +502,39 @@ After that, you should be able to see the angular default page runnning at http:
 
 Again, to make the process to deploy and execute the container more confortable and easy, lets create the docker compose file:
 
+create docker folder inside frontend folder:
+
+mkdir docker
+cd docker
+
+create the docker-compose.test.yml file:
+
+services:
+  myappclient:
+    image: my-app-client-test:1.0
+    container_name: my-app-client-test-container
+    build:
+      context: ../.
+      dockerfile: Dockerfile
+      args:
+        ANGULAR_PROJECT_NAME: client
+    env_file:
+      - ../.env.test
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../nginx-server/certs:/etc/nginx/ssl
+      - ../nginx-server/nginx.conf:/etc/nginx/nginx.conf
+      - ../nginx-server/default.conf.template:/etc/nginx/conf.d/default.conf.template
+
+And create the .env.test file at the same level of docker folder with this content:
+
+SERVER_DOMAIN=localhost # The entrypoint of our nginx server
+BACKEND_API_URL=localhost:8080 # The entry point of our backendapi, not configured yet
+CERT_NAME=localhost.crt
+CERT_KEY=localhost.key
+ANGULAR_PROJECT_NAME=client # the name of our app, needed to build the app.
+NODE_END=development
+
+--------------------------------------------

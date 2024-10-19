@@ -1,0 +1,18 @@
+services:
+  myappclient:
+    image: my-app-client-test:1.0
+    container_name: my-app-client-test-container
+    build:
+      context: ../.
+      dockerfile: Dockerfile
+      args:
+        ANGULAR_PROJECT_NAME: client
+    env_file:
+      - ../.env.test
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../nginx-server/certs:/etc/nginx/ssl
+      - ../nginx-server/nginx.conf:/etc/nginx/nginx.conf
+      - ../nginx-server/default.conf.template:/etc/nginx/conf.d/default.conf.template
