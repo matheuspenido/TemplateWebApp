@@ -1,0 +1,31 @@
+server {
+    listen 80;
+    server_name ${SERVER_DOMAIN};
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name ${SERVER_DOMAIN};
+
+    # SSL Configuration
+    ssl_certificate /etc/nginx/ssl/${CERT_NAME};
+    ssl_certificate_key /etc/nginx/ssl/${CERT_KEY};
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    root /usr/share/nginx/html;
+
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    gzip on;
+    gzip_types text/plain application/javascript application/x-javascript text/javascript text/css application/xml text/xml application/json image/svg+xml;
+    gzip_proxied any;
+    gzip_vary on;
+}

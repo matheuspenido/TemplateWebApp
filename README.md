@@ -351,3 +351,154 @@ services:
 networks:
   rp-network:
     driver: bridge
+
+=================================
+=================================
+
+Now, lets build our Angular frontend app.
+Our frontend will be created using nginx, but in the same container this time, just to handle the SSL cryptograph.
+
+Lets move everything inside to a new folder named backend (except the readme.md file)
+Create the frontend folder inside the WebApp folder (root folder), the frontend folder should be next to backend folder.
+
+----------------------------------------------
+
+Create the Angular project:
+
+cd frontend
+
+Run the specific image, to ensure that the project will follow all the requirements regarding package version:
+
+docker run --rm -it -v $(pwd):/app node:20.11.1 bash
+
+inside the container:
+install angular:
+npm install -g @angular/cli@17
+
+cd /app
+create the project:
+ng new client --skip-git --directory=.
+This command will create the angular inside the /app folder and the app folder is mapped to frontend in out host project.
+
+install nodemon to allow us to reload our app when in development
+npm install nodemon --save-dev
+
+To come back to host and leave the iterative image of node:
+exit
+
+change the files permission, to do that, go to the root folder and do:
+sudo chown -R Matheus:Matheus ./frontend
+
+----------------------------------------------
+
+Creating the Dockerfile for our frontend app (not development, but for test environment):
+
+# Stage 1: Build Angular Application
+FROM node:20.11.1 AS build
+WORKDIR /app
+
+# Copy package.json and package-lock.json to install dependencies
+COPY ./package.json ./package-lock.json ./
+RUN npm install
+
+# Copy the rest of the application code
+COPY . .
+
+# Build the Angular app for production
+RUN npm run build
+
+# Stage 2: Serve with Nginx
+FROM nginx:alpine AS publish
+
+ARG ANGULAR_PROJECT_NAME
+
+# Copy the built Angular app from the build stage
+COPY --from=build /app/dist/${ANGULAR_PROJECT_NAME}/browser /usr/share/nginx/html
+
+# Expose port 80 for HTTP and HTTPS traffic
+EXPOSE 80
+EXPOSE 443
+
+# Start replace the env variable inside the template and nginx server
+CMD ["/bin/sh", "-c", "\
+    envsubst '${SERVER_DOMAIN} ${BACKEND_API_URL} ${CERT_KEY} ${CERT_NAME}' \
+    < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && \
+    nginx -g 'daemon off;'"]
+
+----------------------------------------------
+
+Inside the frontend folder, create a folder called nginx-server and copy the certs folder from nginx-server inside the backend. It is a portfolio project, there is no problem to reutilize certificates here.
+
+To be able to create a http server, create the file nginx.conf inside the nginx folder with the following content:
+
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log warn;
+pid /var/run/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for"';
+    
+    access_log /var/log/nginx/access.log main;
+
+    sendfile on;
+    keepalive_timeout 65;
+
+    include /etc/nginx/conf.d/*.conf;
+}
+
+Create other file called default.conf.template:
+
+server {
+    listen 80;
+    server_name ${SERVER_DOMAIN};
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name ${SERVER_DOMAIN};
+
+    # SSL Configuration
+    ssl_certificate /etc/nginx/ssl/${CERT_NAME};
+    ssl_certificate_key /etc/nginx/ssl/${CERT_KEY};
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    root /usr/share/nginx/html;
+
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    gzip on;
+    gzip_types text/plain application/javascript application/x-javascript text/javascript text/css application/xml text/xml application/json image/svg+xml;
+    gzip_proxied any;
+    gzip_vary on;
+}
+
+To test the application, run:
+
+dockebuild -t my-angular-app --build-arg ANGULAR_PROJECT_NAME=client .
+
+docker run --rm -v $(pwd)/nginx-server/certs/localhost.crt:/etc/nginx/ssl/localhost.crt -v $(pwd)/nginx-server/certs/localhost.key:/etc/nginx/ssl/localhost.key -v $(pwd)/nginx-server/default.conf.template:/etc/nginx/conf.d/default.conf.template -v $(pwd)/nginx-server/nginx.conf:/etc/nginx/nginx.conf -e SERVER_DOMAIN=localhost -e CERT_NAME=localhost.crt -e CERT_KEY=localhost.key -e ANGULAR_PROJECT_NAME=client -p 80:80 -p 443:443 my-angular-app
+
+After that, you should be able to see the angular default page runnning at http://localhost or https://localhost
+
+------------------------------
+
+Again, to make the process to deploy and execute the container more confortable and easy, lets create the docker compose file:
+
