@@ -1,0 +1,8 @@
+{
+    "watch": ["src/", "angular.json", "package.json", "tsconfig.json"],
+    "ext": "ts, html,css,scss,json",
+    "execMap": {
+        "json": "npm install"
+    },
+    "exec": "ng serve --hmr --live-reload --disable-host-check --host ${HOST} --port ${INTERNAL_HTTP_PORT}"
+}

@@ -538,3 +538,17 @@ ANGULAR_PROJECT_NAME=client # the name of our app, needed to build the app.
 NODE_END=development
 
 --------------------------------------------
+
+Now, it is time to configure our dev environment for our Angular app.
+
+Let's get started with nodemon configuration. Nodemon will allow us to save our code inside IDE and it will be automaticaly updated inside our image.
+
+Create the nodemon inside the root folder for the frontend, name this file as nodemon.js:
+{
+    "watch": ["src/", "angular.json", "package.json", "tsconfig.json"],
+    "ext": "ts, html,css,scss,json",
+    "execMap": {
+        "json": "npm install"
+    },
+    "exec": "ng serve --host ${HOST} --port ${HTTP_PORT}"
+}
