@@ -1,0 +1,16 @@
+services:
+  my-app-client-dev:
+    image: my-app-client-dev:1.0
+    container_name: my-app-client-dev-container
+    build:
+      context: ../.
+      dockerfile: Dockerfile.dev
+    env_file:
+      - ../.env.dev
+    ports:
+      - "4200:4200"
+      - "4201:4201"
+    volumes:
+      - ../:/app
+      - ../nginx-server/certs/localhost.crt:/https/localhost.crt
+      - ../nginx-server/certs/localhost.key:/https/localhost.key

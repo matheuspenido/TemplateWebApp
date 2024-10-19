@@ -4,5 +4,5 @@
     "execMap": {
         "json": "npm install"
     },
-    "exec": "ng serve --hmr --live-reload --disable-host-check --host ${HOST} --port ${INTERNAL_HTTP_PORT}"
+    "exec": "ng serve --host ${HOST} --port ${DEVSERVER_HTTPS_PORT} --ssl true --ssl-cert /https/${CERT_NAME} --ssl-key /https/${CERT_KEY} --hmr --live-reload & ng serve --host ${HOST} --port ${DEVSERVER_HTTP_PORT} --hmr --live-reload"
 }

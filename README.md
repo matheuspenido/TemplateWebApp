@@ -539,16 +539,62 @@ NODE_END=development
 
 --------------------------------------------
 
-Now, it is time to configure our dev environment for our Angular app.
+Now, it is time to configure our dev environment for our Angular app. The dev server will be the same provided by node with nodemon to help refresh the code.
 
-Let's get started with nodemon configuration. Nodemon will allow us to save our code inside IDE and it will be automaticaly updated inside our image.
+Create the Dockercompose.dev file inside frontend folder:
 
-Create the nodemon inside the root folder for the frontend, name this file as nodemon.js:
-{
-    "watch": ["src/", "angular.json", "package.json", "tsconfig.json"],
-    "ext": "ts, html,css,scss,json",
-    "execMap": {
-        "json": "npm install"
-    },
-    "exec": "ng serve --host ${HOST} --port ${HTTP_PORT}"
-}
+# Stage 1: Build Angular Application
+FROM node:20.11.1 AS build
+
+# Copy package.json and package-lock.json to install dependencies
+COPY ./package.json ./package-lock.json ./
+RUN npm install
+
+WORKDIR /app
+
+# Copy the rest of the application code
+COPY . .
+
+# Install nodemon globally to allow the code be reloaded
+RUN npm install -g nodemon
+
+# Expose HTTP (4200) and HTTPS (4201)
+EXPOSE 4200
+EXPOSE 4201
+
+# Start nodemon
+CMD npx nodemon
+
+To test it, lets execute docker build and docker run:
+
+docker build -f Dockerfile.dev -t angular-dev .
+
+docker run --rm -v $(pwd):/app -v $(pwd)/nginx-server/certs/localhost.crt:/https/localhost.crt -v $(pwd)/nginx-server/certs/localhost.key:/https/localhost.key -e SERVER_DOMAIN=localhost -e CERT_KEY=localhost.key -e CERT_NAME=localhost.crt -e HOST=0.0.0.0 -e DEVSERVER_HTTP_PORT=4200 -e DEVSERVER_HTTPS_PORT=4201 -p 4201:4201 -p 4200:4200 angular-dev
+
+The volume for build include the frontend folder and certs, while environment variables are be using to configure port and host.
+
+After it is up and running, you can try to change somefile to verify if it will be reflected on the loaded page when changed.
+
+------------------------------------
+
+Docker compose for dev env:
+Inside the docker folder, create the file named docker-compose.dev.yml:
+
+services:
+  my-app-client-dev:
+    image: my-app-client-dev:1.0
+    container_name: my-app-client-dev-container
+    build:
+      context: ../.
+      dockerfile: Dockerfile.dev
+    env_file:
+      - ../.env.dev
+    ports:
+      - "4200:4200"
+      - "4201:4201"
+    volumes:
+      - ../:/app
+      - ../nginx-server/certs/localhost.crt:/https/localhost.crt
+      - ../nginx-server/certs/localhost.key:/https/localhost.key
+
+To test it just run docker-compose -f docker-compose.dev.yml up --build
