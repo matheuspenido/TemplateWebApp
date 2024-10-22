@@ -3,10 +3,11 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "HOST_USER_ID=$(id -u) HOST_GROUP_ID=$(id -g) docker-compose -f docker/docker-compose.dev.yml up --build",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "docker-test": "docker exec my-app-client-dev-container npm run test"
   },
   "private": true,
   "dependencies": {

@@ -1,21 +1,56 @@
 # Stage 1: Build Angular Application
 FROM node:20.11.1 AS build
-
-# Copy package.json and package-lock.json to install dependencies
-COPY ./package.json ./package-lock.json ./
-RUN npm install
-
+ 
 WORKDIR /app
 
-# Copy the rest of the application code
-COPY . .
+# Installing tools for allow unit tests
+RUN apt-get update && apt-get install -y \
+    chromium \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxdamage1 \
+    libgbm1 \
+    libasound2 \
+    fonts-freefont-ttf \
+    gosu
 
 # Install nodemon globally to allow the code be reloaded
 RUN npm install -g nodemon
+
+# Build arguments for dynamic UID and GID
+ARG UID=1000
+ARG GID=1000
+
+# Ensure the user and group exist with the correct UID and GID
+RUN if ! getent group $GID >/dev/null; then \
+      addgroup --gid $GID appgroup; \
+    fi && \
+    if ! id -u $UID >/dev/null 2>&1; then \
+      adduser --disabled-password --gecos "" --uid $UID --gid $GID appuser; \
+    fi
+
+# Ensure the /app directory is owned by the new user
+RUN chown -R $UID:$GID /app
+
+# Switch to the non-root user
+USER $UID:$GID
+
+# Copy package.json and package-lock.json to install dependencies
+COPY --chown=$UID:$GID ./package.json ./package-lock.json ./
+
+RUN npm install
+
+# Copy the rest of the application code
+COPY . .
 
 # Expose HTTP (4200) and HTTPS (4201)
 EXPOSE 4200
 EXPOSE 4201
 
+# Karma for running tests
+EXPOSE 9876
+
 # Start nodemon
-CMD npx nodemon
+CMD ["npx", "nodemon"]
