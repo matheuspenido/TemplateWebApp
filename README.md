@@ -2,8 +2,11 @@ Backend with NGINX and Docker:
 
 mkdir MyApp
 
+WARNING: Needs to be updated to ensure the use of --user "$(id -u):$(id -g) during the project creation, it is important to avoid problems when use the Docker to develop apps.
+
+
 Create the backend app:
-docker run --rm -it -v $(pwd)/MyApp:/app mcr.microsoft.com/dotnet/sdk:8.0 bash
+docker run --rm -it --user "$(id -u):$(id -g)" -v $(pwd)/MyApp:/app mcr.microsoft.com/dotnet/sdk:8.0 bash
 
 inside the container, do:
 
